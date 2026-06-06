@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>王者荣耀英雄抽奖</title>
+  <style>
+    :root {
+      --bg: #070912;
+      --panel: rgba(13, 18, 34, .74);
+      --line: rgba(255, 255, 255, .14);
+      --text: #f8fbff;
+      --muted: #aeb8cf;
+      --gold: #f2c76b;
+      --cyan: #48d8ff;
+      --red: #ff5370;
+      --green: #77e0a3;
+      --shadow: 0 26px 90px rgba(0, 0, 0, .5);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(72, 216, 255, .24), transparent 22rem),
+        radial-gradient(circle at 82% 0%, rgba(242, 199, 107, .22), transparent 20rem),
+        radial-gradient(circle at 50% 92%, rgba(255, 83, 112, .18), transparent 26rem),
+        linear-gradient(135deg, #070912 0%, #11172b 52%, #070912 100%);
+      overflow-x: hidden;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 28px));
+      min-height: 100vh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 440px;
+      gap: 28px;
+      align-items: center;
+      padding: 26px 0;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .logo {
+      width: 92px;
+      height: 92px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #f2c76b, #b47a28 44%, #2b4eb3);
+      box-shadow: 0 18px 55px rgba(242, 199, 107, .28);
+    }
+
+    .logo svg { width: 66px; height: 66px; }
+
+    h1 {
+      margin: 0;
+      max-width: 720px;
+      font-size: clamp(42px, 7vw, 88px);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 680px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2.2vw, 23px);
+      line-height: 1.65;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 690px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .07);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .chip.active {
+      color: #10131d;
+      background: linear-gradient(135deg, var(--gold), #fff1a3);
+      border-color: transparent;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 690px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(255, 255, 255, .06);
+      backdrop-filter: blur(12px);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 26px;
+      color: var(--gold);
+      line-height: 1.1;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .draw-zone {
+      display: grid;
+      gap: 14px;
+    }
+
+    .poster-card {
+      position: relative;
+      min-height: 650px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #11172b;
+      box-shadow: var(--shadow);
+    }
+
+    .poster-card::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      z-index: 3;
+      border: 1px solid rgba(242, 199, 107, .36);
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .poster {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      transform: scale(1.02);
+      transition: transform .55s ease, filter .55s ease;
+    }
+
+    .poster-card.spinning .poster {
+      filter: blur(4px) saturate(1.35);
+      transform: scale(1.08);
+    }
+
+    .shade {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(180deg, rgba(7, 9, 18, .02) 0%, rgba(7, 9, 18, .1) 42%, rgba(7, 9, 18, .9) 78%, rgba(7, 9, 18, .98) 100%),
+        linear-gradient(90deg, rgba(7, 9, 18, .7), transparent 42%, rgba(7, 9, 18, .28));
+    }
+
+    .result {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2;
+      display: grid;
+      gap: 12px;
+    }
+
+    .role {
+      width: max-content;
+      max-width: 100%;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: #10131d;
+      background: linear-gradient(135deg, var(--gold), #fff0a6);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .name {
+      margin: 0;
+      font-size: clamp(46px, 13vw, 82px);
+      line-height: .92;
+      letter-spacing: 0;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, .48);
+    }
+
+    .title {
+      margin: 0;
+      color: #dfe7ff;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .skin {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .main-btn, .side-btn {
+      min-height: 58px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      color: #10131d;
+      background: linear-gradient(135deg, var(--gold), #fff1a3);
+      font: inherit;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 16px 34px rgba(242, 199, 107, .22);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .side-btn {
+      color: var(--text);
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .history {
+      min-height: 92px;
+      max-height: 146px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .history div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      padding-bottom: 8px;
+    }
+
+    .history div:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(7, 9, 18, .86);
+      backdrop-filter: blur(18px);
+    }
+
+    .loading-box {
+      width: min(460px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      background: #101728;
+      box-shadow: var(--shadow);
+    }
+
+    .loading-box h2 {
+      margin: 0 0 10px;
+      font-size: 26px;
+    }
+
+    .loading-box p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 920px) {
+      .app {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .poster-card {
+        min-height: 560px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app { width: min(100% - 18px, 1180px); padding: 14px 0; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .actions { grid-template-columns: 1fr; }
+      .poster-card { min-height: 540px; }
+      .result { left: 18px; right: 18px; bottom: 20px; }
+      .filters { gap: 8px; }
+      .chip { min-height: 38px; padding: 0 11px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero-copy" aria-label="说明">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M50 8l33 15v25c0 22-13 35-33 44C30 83 17 70 17 48V23L50 8Z" fill="#10131d"/>
+          <path d="M50 20l19 9-8 17 12 6-23 28-23-28 12-6-8-17 19-9Z" fill="#f2c76b"/>
+          <path d="M36 53h28M42 41h16" stroke="#10131d" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>王者荣耀英雄抽奖</h1>
+      <p class="lead">随机抽一个英雄，用官方英雄海报做卡面。可以全英雄抽，也可以按职业筛选，适合开黑前决定今晚谁来上场。</p>
+
+      <div class="filters" id="filters" aria-label="职业筛选"></div>
+
+      <div class="stats">
+        <div class="stat"><strong id="totalCount">0</strong><span>英雄池</span></div>
+        <div class="stat"><strong id="poolCount">0</strong><span>当前筛选</span></div>
+        <div class="stat"><strong id="drawCount">0</strong><span>已抽次数</span></div>
+      </div>
+    </section>
+
+    <section class="draw-zone" aria-label="抽奖区">
+      <article class="poster-card" id="posterCard">
+        <img class="poster" id="poster" alt="王者荣耀英雄海报" />
+        <div class="shade"></div>
+        <div class="result">
+          <span class="role" id="role">全英雄</span>
+          <h2 class="name" id="name">准备抽取</h2>
+          <p class="title" id="title">点击按钮开始随机英雄</p>
+          <p class="skin" id="skin">海报来自王者荣耀官方英雄静态资源。</p>
+        </div>
+      </article>
+
+      <div class="actions">
+        <button class="main-btn" id="drawBtn" type="button">开始抽奖</button>
+        <button class="side-btn" id="againBtn" type="button">再抽一次</button>
+      </div>
+
+      <div class="history" id="history">
+        <div><span>等待第一次抽取</span><span>王者峡谷</span></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="loading" id="loading">
+    <div class="loading-box">
+      <h2>正在加载英雄池</h2>
+      <p id="loadingText">读取本地英雄数据，并使用腾讯游戏官方英雄海报。</p>
+    </div>
+  </div>
+
+  <script>
+    const roleMap = {
+      1: "战士",
+      2: "法师",
+      3: "坦克",
+      4: "刺客",
+      5: "射手",
+      6: "辅助"
+    };
+
+    const state = {
+      heroes: [],
+      pool: [],
+      role: "all",
+      history: [],
+      spinning: false
+    };
+
+    const posterCard = document.getElementById("posterCard");
+    const poster = document.getElementById("poster");
+    const roleEl = document.getElementById("role");
+    const nameEl = document.getElementById("name");
+    const titleEl = document.getElementById("title");
+    const skinEl = document.getElementById("skin");
+    const historyEl = document.getElementById("history");
+    const totalCountEl = document.getElementById("totalCount");
+    const poolCountEl = document.getElementById("poolCount");
+    const drawCountEl = document.getElementById("drawCount");
+    const loading = document.getElementById("loading");
+    const loadingText = document.getElementById("loadingText");
+
+    function posterUrl(hero) {
+      return `https://game.gtimg.cn/images/yxzj/img201606/skin/hero-info/${hero.ename}/${hero.ename}-bigskin-1.jpg`;
+    }
+
+    function avatarUrl(hero) {
+      return `https://game.gtimg.cn/images/yxzj/img201606/heroimg/${hero.ename}/${hero.ename}.jpg`;
+    }
+
+    function heroRoles(hero) {
+      return [hero.hero_type, hero.hero_type2].filter(Boolean).map(type => roleMap[type]).filter(Boolean);
+    }
+
+    function firstSkin(hero) {
+      return String(hero.skin_name || "").split("|")[0] || "默认海报";
+    }
+
+    function normalizeHero(hero) {
+      return {
+        ename: hero.ename,
+        cname: hero.cname,
+        title: hero.title || "",
+        hero_type: hero.hero_type,
+        hero_type2: hero.hero_type2,
+        skin_name: hero.skin_name || ""
+      };
+    }
+
+    function setHero(hero, quick = false) {
+      poster.src = posterUrl(hero);
+      poster.onerror = () => {
+        poster.onerror = null;
+        poster.src = avatarUrl(hero);
+      };
+      roleEl.textContent = heroRoles(hero).join(" / ") || "英雄";
+      nameEl.textContent = hero.cname;
+      titleEl.textContent = hero.title;
+      skinEl.textContent = `默认海报：${firstSkin(hero)}`;
+      if (!quick) addHistory(hero);
+    }
+
+    function addHistory(hero) {
+      state.history.unshift(hero);
+      drawCountEl.textContent = state.history.length;
+      historyEl.innerHTML = state.history.slice(0, 8).map((item, index) => {
+        const roles = heroRoles(item).join(" / ") || "英雄";
+        return `<div><span>${index + 1}. ${item.cname}</span><span>${roles}</span></div>`;
+      }).join("");
+    }
+
+    function randomHero() {
+      return state.pool[Math.floor(Math.random() * state.pool.length)];
+    }
+
+    function drawHero() {
+      if (state.spinning || !state.pool.length) return;
+      state.spinning = true;
+      posterCard.classList.add("spinning");
+      const start = Date.now();
+      const timer = setInterval(() => setHero(randomHero(), true), 88);
+      setTimeout(() => {
+        clearInterval(timer);
+        const hero = randomHero();
+        setHero(hero);
+        posterCard.classList.remove("spinning");
+        state.spinning = false;
+      }, Math.max(1200, 2100 - (Date.now() - start)));
+    }
+
+    function applyFilter(role) {
+      state.role = role;
+      state.pool = role === "all"
+        ? [...state.heroes]
+        : state.heroes.filter(hero => hero.hero_type === Number(role) || hero.hero_type2 === Number(role));
+      poolCountEl.textContent = state.pool.length;
+      document.querySelectorAll(".chip").forEach(button => {
+        button.classList.toggle("active", button.dataset.role === String(role));
+      });
+      if (state.pool.length) setHero(randomHero(), true);
+    }
+
+    function renderFilters() {
+      const filters = document.getElementById("filters");
+      const items = [["all", "全部"], ...Object.entries(roleMap)];
+      filters.innerHTML = items.map(([value, label]) => (
+        `<button class="chip" type="button" data-role="${value}">${label}</button>`
+      )).join("");
+      filters.querySelectorAll(".chip").forEach(button => {
+        bindButton(button, () => applyFilter(button.dataset.role));
+      });
+    }
+
+    function bindButton(target, handler) {
+      const button = typeof target === "string" ? document.getElementById(target) : target;
+      let lastTap = 0;
+      const run = event => {
+        if (event) event.preventDefault();
+        const now = Date.now();
+        if (now - lastTap < 260) return;
+        lastTap = now;
+        handler();
+      };
+      button.addEventListener("click", run);
+      button.addEventListener("touchend", run, { passive: false });
+    }
+
+    async function init() {
+      try {
+        const response = await fetch("./wzry-heroes.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const heroes = await response.json();
+        state.heroes = heroes.map(normalizeHero);
+        totalCountEl.textContent = state.heroes.length;
+        renderFilters();
+        applyFilter("all");
+        loading.classList.add("hidden");
+      } catch (error) {
+        loadingText.textContent = "英雄数据加载失败。请确认 index.html 和 wzry-heroes.json 在同一个文件夹，并通过网站链接打开。";
+      }
+    }
+
+    bindButton("drawBtn", drawHero);
+    bindButton("againBtn", drawHero);
+    init();
+  </script>
+</body>
+</html>
